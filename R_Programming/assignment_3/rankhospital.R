@@ -1,4 +1,4 @@
-best <- function(state, outcome) {
+rankhospital <- function(state, outcome, num = "best") {
   ## Supress warnings incited by the cast
   options(warn=-1)
   
@@ -11,12 +11,26 @@ best <- function(state, outcome) {
   if(sum(data$State == state) == 0) {
     stop("invalid state")
   }
-
-  ## Return hospital name in that state with lowest 30-day death
-  ## rate
+  
+  if(num == "best") {
+    sortOrder <- "positive"
+    rowIndex <- 1
+  } else if(num == "worst") {
+    sortOrder <- "negative"
+    rowIndex <- 1
+  } else {
+    sortOrder <- "positive"
+    rowIndex <- num
+  }
+  
   filteredData <- data[data$State == state, c(2, col)]
   filteredData[, 2] <- sapply(filteredData[, 2], as.numeric)
-  hospitalName <- filteredData[order(filteredData[2], filteredData[1]),][1, 1]
+  if(sortOrder == "negative")  {
+    sorted <- order(-filteredData[2], filteredData[1])
+  } else {
+    sorted <- order(filteredData[2], filteredData[1])
+  }
+  hospitalName <- filteredData[sorted,][rowIndex, 1]
   print(hospitalName)
 }
 
