@@ -1,37 +1,36 @@
-library(plyr)
-library(reshape2)
+# Read in features from file
+rawFeatures <- read.table("./UCI HAR Dataset/features.txt", col.names = c("Id", "Feature"))
 
-activityLabels <- read.table("./data/UCI HAR Dataset/activity_labels.txt", col.names = c("Id", "Activity"), colClasses = c("numeric", "character"))
-features <- read.table("./data/UCI HAR Dataset/features.txt", col.names = c("Id", "Feature"))
-filteredFeatures <- features[grepl(".*(mean|std)[()].*", features$Feature),]
-filteredTestData <- read.table("./data/UCI HAR Dataset/test/X_test.txt", col.names = features[,2])[,filteredFeatures[,2]]
-filteredTestData$Activity <- as.factor(read.table("./data/UCI HAR Dataset/test/y_test.txt")[,1])
-filteredTrainData <- read.table("./data/UCI HAR Dataset/train/X_train.txt", col.names = features[,2])[,filteredFeatures[,2]]
-filteredTrainData$Activity <- as.factor(read.table("./data/UCI HAR Dataset/train/y_train.txt")[,1])
-testSubjects <- as.factor(read.table("./data/UCI HAR Dataset/test/subject_test.txt")[,1])
-trainSubjects <- as.factor(read.table("./data/UCI HAR Dataset/train/subject_train.txt")[,1])
-subjects <- c(testSubjects, trainSubjects)
+# Filter feature list to include only mean and std features
+features <- rawFeatures[grepl(".*(mean|std)[()].*", rawFeatures$Feature),]$Feature
 
-combinedData <- rbind(filteredTestData, filteredTrainData)
-activities <- as.factor(mapvalues(combinedData$Activity, from=activityLabels[,1], to=activityLabels[,2]))
-combinedData$Activity <- NULL
-splitData <- split(combinedData, list(subjects, activities))
-tidyData <- sapply(splitData, colMeans)
-meltedData <- melt(tidyData)
-temp <- colsplit(meltedData$Var2, pattern = "\\.", names = c('Subject', 'Activity'))
-meltedData$Subject <- temp$Subject
-meltedData$Activity <- temp$Activity
-meltedData$Var2 <- NULL
-names(meltedData) <- c("Measurement", "Mean", "Subject", "Activity")
+# Read in X test and training data and include only columns from the filtered feature list
+testData <- read.table("./UCI HAR Dataset/test/X_test.txt")[,features]
+trainData <- read.table("./UCI HAR Dataset/train/X_train.txt")[,features]
 
-rm(filteredTestData)
-rm(filteredTrainData)
-rm(activityLabels)
-rm(features)
-rm(filteredFeatures)
-rm(activities)
-rm(subjects)
-rm(testSubjects)
-rm(trainSubjects)
+# Read in Y test and training data and convert the data into a vector
+rawActivities <- as.factor(c(read.table("./UCI HAR Dataset/test/y_test.txt")[,1], read.table("./UCI HAR Dataset/train/y_train.txt")[,1]))
 
-write.table(meltedData, row.names = F, file = "./tidy_data.txt")
+# Read in activity labels
+activityLabels <- read.table("./UCI HAR Dataset/activity_labels.txt", col.names = c("Id", "Activity"), colClasses = c("numeric", "character"))
+
+# Create an activity vector from the Y data replacing the numeric values with the string factor values
+activities <- as.factor(mapvalues(rawActivities, from=activityLabels[,1], to=activityLabels[,2]))
+
+# Read in the subject lists as a vector
+subjects <- as.factor(c(read.table("./UCI HAR Dataset/test/subject_test.txt")[,1], read.table("./UCI HAR Dataset/train/subject_train.txt")[,1]))
+
+# Bind all data together
+data <- cbind(subjects, activities, rbind(testData, trainData))
+
+# Set up clean names for the combined data
+featureNames <- gsub("[-()]", "", features)
+featureNames <- gsub("std", "Standard", featureNames)
+featureNames <- gsub("mean", "Mean", featureNames)
+names(data) <- c("Subject", "Activity", featureNames)
+
+# Clean up unused data
+rm(activityLabels, rawFeatures, rawActivities, subjects, activities, testData, trainData, features, featureNames)
+
+# Write data to results.txt
+write.table(data, file="results.txt", row.name=FALSE)
