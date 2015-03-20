@@ -1,3 +1,11 @@
+## run_analysis.R
+## This R script creates a tidy data set from the UCI HAR Dataset
+## It improves the data's usefulness by including only mean and standard deviation
+## for the combined test and training data and utilizing
+## the activity and feature names.
+
+library(plyr)
+
 # Read in features from file
 rawFeatures <- read.table("./UCI HAR Dataset/features.txt", col.names = c("Id", "Feature"))
 
@@ -15,6 +23,7 @@ rawActivities <- as.factor(c(read.table("./UCI HAR Dataset/test/y_test.txt")[,1]
 activityLabels <- read.table("./UCI HAR Dataset/activity_labels.txt", col.names = c("Id", "Activity"), colClasses = c("numeric", "character"))
 
 # Create an activity vector from the Y data replacing the numeric values with the string factor values
+# Utilizes the plyr library's mapvalues function
 activities <- as.factor(mapvalues(rawActivities, from=activityLabels[,1], to=activityLabels[,2]))
 
 # Read in the subject lists as a vector
@@ -25,7 +34,7 @@ data <- cbind(subjects, activities, rbind(testData, trainData))
 
 # Set up clean names for the combined data
 featureNames <- gsub("[-()]", "", features)
-featureNames <- gsub("std", "Standard", featureNames)
+featureNames <- gsub("std", "StandardDeviation", featureNames)
 featureNames <- gsub("mean", "Mean", featureNames)
 names(data) <- c("Subject", "Activity", featureNames)
 
